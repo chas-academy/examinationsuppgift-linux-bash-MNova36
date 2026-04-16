@@ -33,7 +33,7 @@ do
     #---------------------------------
     #create user with home directory
     #---------------------------------
-    sudo useradd -m  "$user" 2>/dev/null
+    useradd -m  "$user"
     home=$(eval echo "~$user")
 
     #---------------------------------
