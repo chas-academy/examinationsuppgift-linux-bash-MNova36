@@ -1,6 +1,6 @@
 #!/bin/bash
 #-------------------------------
-#Chek if script is run as root
+#Check if script is run as root
 #-------------------------------
 if [ "$EUID" -ne 0 ]; then
     echo "ERROR: Please run as root"
@@ -8,22 +8,22 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 #-------------------------------
-#Check if at least one usernam is given
+#Check if at least one username is given
 #------------------------------------
 if [ $# -eq 0 ]; then
-    echo "ERROR: No usernames orivided"
+    echo "ERROR: No usernames privided"
     echo "Usage: $0 user 1 user2 ..."
     exit 1
 fi
 
 #----------------------------------
-#Lopp through all given users
+#Loop through all given users
 #----------------------------------
 for user in "$@"
 do
     echo "Creating user $user"
     #--------------------------
-    #Chek if user already exist
+    #Check if user already exist
     #--------------------------
     if id "$user" &>/dev/null; then
         echo "Warning: User $user already exist"
@@ -72,7 +72,7 @@ do
     }  > "$welcome"
 
     #-----------------------------------
-    # Secure welcom file
+    # Secure welcome file
     #-----------------------------
     chmod 600 "$welcome"
     echo "Done: $user created successfully"
