@@ -11,7 +11,7 @@ fi
 #Check if at least one username is given
 #------------------------------------
 if [ $# -eq 0 ]; then
-    echo "ERROR: No usernames privided"
+    echo "ERROR: No usernames provided"
     echo "Usage: $0 user 1 user2 ..."
     exit 1
 fi
