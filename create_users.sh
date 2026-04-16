@@ -33,7 +33,7 @@ do
     #---------------------------------
     #create user with home directory
     #---------------------------------
-    useradd -m "$user"
+    useradd -m "$user" 2>/dev/null
     home=$(eval echo "~$user")
 
     #---------------------------------
@@ -67,7 +67,7 @@ do
     {
         echo "Välkommen $user"
         echo ""
-        echo "Other system users:"
+        echo "Andra systemanvändare:"
         awk -F: '$3 >= 1000 {print $1}' /etc/passwd | grep -v "^$user$"
     }  > "$welcome"
 
