@@ -68,7 +68,7 @@ do
         echo "Välkommen $user"
         echo ""
         echo "Andra systemanvändare:"
-        awk -F: -v current_user="$user" '$3 >= 1000 && $1 != current_user {print $1}' /etc/passwd
+        awk -F: '$3 >= 1000 {print $1}' /etc/passwd | grep -v "^$user$"
     }  > "$welcome"
 
     #-----------------------------------
