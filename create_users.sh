@@ -33,7 +33,7 @@ do
     #---------------------------------
     #create user with home directory
     #---------------------------------
-    useradd -m  "$user"
+    useradd -m "$user" || echo "FAILED TO CREATE USER: $user"
     home=$(eval echo "~$user")
 
     #---------------------------------
