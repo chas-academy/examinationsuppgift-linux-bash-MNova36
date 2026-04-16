@@ -34,7 +34,7 @@ do
     #create user with home directory
     #---------------------------------
     useradd -m "$user"
-    home="/home/$user"
+    home=$(eval echo "~$user")
 
     #---------------------------------
     #Check if home directory exist
@@ -65,7 +65,7 @@ do
 
     welcome="$home/welcome.txt"
     {
-        echo "Welcome $user"
+        echo "Välkommen $user"
         echo ""
         echo "Other system users:"
         awk -F: '$3 >= 1000 {print $1}' /etc/passwd | grep -v "^$user$"
