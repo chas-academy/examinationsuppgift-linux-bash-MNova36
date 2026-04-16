@@ -2,7 +2,7 @@
 #-------------------------------
 #Chek if script is run as root
 #-------------------------------
-if [ "EUID" -ne 0 ]; then
+if [ "$EUID" -ne 0 ]; then
     echo "ERROR: Please run as root"
     exit 1
 fi
@@ -39,7 +39,7 @@ do
     #---------------------------------
     #Check if home directory exist
     #---------------------------------
-    if [ ! -d "home" ]; then
+    if [ ! -d "$home" ]; then
         echo "ERROR: Home directory not created for $user"
         continue
     fi
@@ -47,12 +47,12 @@ do
     #--------------------------
     #Create folders inside home
     #--------------------------
-    mkdir -p "$home/Documents" "$home/Dowloads" "$home/Work"
+    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
 
     #--------------
     #Set permissions for only users
     #----------------
-    chmod 700 "$user/Documents" "$home/Dowloads" "$home/Work"
+    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
 
     #-----------------------------
     #Set ownership to user
@@ -63,13 +63,13 @@ do
     #Create welcome file
     #--------------------------
 
-    welcom="$home/welcom.txt"
+    welcome="$home/welcom.txt"
     {
         echo "Welcome $user"
         echo ""
         echo "Other system users:"
         awk -F: "$3 >= 1000 {print $1}" /etc/passwd | grep -v "^$user$"
-    }  > "$welcom"
+    }  > "$welcome"
 
     #-----------------------------------
     # Secure welcom file
