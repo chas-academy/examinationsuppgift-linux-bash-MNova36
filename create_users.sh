@@ -8,7 +8,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 #-------------------------------
-#Chek if at least one usernam is given
+#Check if at least one usernam is given
 #------------------------------------
 if [ $# -eq 0 ]; then
     echo "ERROR: No usernames orivided"
@@ -63,12 +63,12 @@ do
     #Create welcome file
     #--------------------------
 
-    welcome="$home/welcom.txt"
+    welcome="$home/welcome.txt"
     {
         echo "Welcome $user"
         echo ""
         echo "Other system users:"
-        awk -F: "$3 >= 1000 {print $1}" /etc/passwd | grep -v "^$user$"
+        awk -F: -v current_user="$user" '$3 >= 1000 && $1 != current_user {print $1}' /etc/passwd
     }  > "$welcome"
 
     #-----------------------------------
