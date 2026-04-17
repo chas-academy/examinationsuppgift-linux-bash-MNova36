@@ -1,6 +1,4 @@
 #!/bin/bash
-# Script to create users, folders, permissions and welcome file
-
 # ---------- ROOT CHECK ----------
 if [ "$EUID" -ne 0 ]; then
     echo "ERROR: Run as root"
@@ -27,8 +25,8 @@ do
     # ---------- CREATE USER ----------
     useradd -m "$user"
 
-    # Get REAL home directory (important for tests)
-    home=$(eval echo "~$user")
+    # Get REAL home directory 
+    home="/home/$user"
 
     # Check home directory exists
     if [ ! -d "$home" ]; then
