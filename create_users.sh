@@ -1,28 +1,21 @@
-#!bin/bash/
-
-#!/bin/bash
-
-# =========================================
-# Script: create_users.sh
-# Beskrivning: Skapar användare, mappar och välkomstfil
-# =========================================
+#!bin/bash
 
 # Kontrollera att scriptet körs som root
 if [ "$EUID" -ne 0 ]; then
-    echo "Fel: Detta script måste köras som root!"
+    echo "ERROR: Please run it as root"
     exit 1
 fi
 
 # Kontrollera att minst en användare skickats in
 if [ "$#" -eq 0 ]; then
-    echo "Användning: $0 användare1 användare2 ..."
+    echo "ERROR: No user provided."
     exit 1
 fi
 
-# Hämta lista över befintliga användare (innan vi skapar nya)
+# Hämta lista över befintliga användare 
 existing_users=$(cut -d: -f1 /etc/passwd)
 
-# Loopa igenom alla argument (användarnamn)
+# Loopa igenom alla användarnamn
 for username in "$@"; do
     
     # Skapa användaren med hemkatalog
