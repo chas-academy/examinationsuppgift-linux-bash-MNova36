@@ -1,62 +1,47 @@
 #!/bin/bash
 
-# Script som skapar användare, hemkatalog, undermappar
-# och en personlig welcome.txt för varje användare.
-# Endast root får köra scriptet.
-
 # Kontrollera att scriptet körs som root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Fel: endast root får köra detta script."
+if [ "$EUID" -ne 0 ]; then
+    echo "Error: This script must be run as root."
     exit 1
 fi
 
 # Kontrollera att minst en användare skickats in
 if [ "$#" -eq 0 ]; then
-    echo "Användning: $0 användare1 användare2 användare3"
+    echo "Usage: $0 username1 username2 username3"
     exit 1
 fi
 
-# Skapa varje användare som skickas in till scriptet
-for username in "$@"; do
-    # Spara alla användare som redan finns i systemet innan ny användare skapas
-    existing_users="$(cut -d: -f1 /etc/passwd)"
+# Loopa igenom alla användarnamn
+for user in "$@"
+do
+    # Spara användare som redan finns innan den nya användaren skapas
+    old_users=$(cut -d: -f1 /etc/passwd)
 
-    # Skapa användaren om den inte redan finns
-    # --badname gör att namn som Anna/Bjorn/Charlie fungerar i tester
-    if ! id "$username" >/dev/null 2>&1; then
-        useradd --badname -m -U "$username"
+    # Skapa användaren och hemkatalogen
+    if ! id "$user" >/dev/null 2>&1; then
+        useradd --badname -m "$user" 2>/dev/null || useradd -m "$user"
     fi
 
-    # Hämta användarens hemkatalog från systemet
-    home_dir="$(getent passwd "$username" | cut -d: -f6)"
+    # Skapa mappar i hemkatalogen
+    mkdir -p "/home/$user/Documents"
+    mkdir -p "/home/$user/Downloads"
+    mkdir -p "/home/$user/Work"
 
-    # Om hemkatalog inte kunde hittas, gå vidare till nästa användare
-    if [ -z "$home_dir" ]; then
-        continue
-    fi
+    # Sätt ägare på hemkatalog och undermappar
+    chown -R "$user:$user" "/home/$user"
 
-    # Skapa undermappar i hemkatalogen
-    mkdir -p "$home_dir/Documents"
-    mkdir -p "$home_dir/Downloads"
-    mkdir -p "$home_dir/Work"
+    # Sätt rättigheter så endast ägaren har åtkomst
+    chmod 700 "/home/$user"
+    chmod 700 "/home/$user/Documents"
+    chmod 700 "/home/$user/Downloads"
+    chmod 700 "/home/$user/Work"
 
-    # Sätt ägare på mapparna
-    chown "$username:$username" "$home_dir/Documents"
-    chown "$username:$username" "$home_dir/Downloads"
-    chown "$username:$username" "$home_dir/Work"
-
-    # Endast ägaren får läsa, skriva och gå in i mapparna
-    chmod 700 "$home_dir/Documents"
-    chmod 700 "$home_dir/Downloads"
-    chmod 700 "$home_dir/Work"
-
-    # Skapa welcome.txt i hemkatalogen
-    {
-        echo "Välkommen $username"
-        echo "$existing_users" | grep -vx "$username"
-    } > "$home_dir/welcome.txt"
+    # Skapa welcome.txt
+    echo "Välkommen $user" > "/home/$user/welcome.txt"
+    echo "$old_users" | grep -v "^$user$" >> "/home/$user/welcome.txt"
 
     # Sätt ägare och rättigheter på welcome.txt
-    chown "$username:$username" "$home_dir/welcome.txt"
-    chmod 600 "$home_dir/welcome.txt"
+    chown "$user:$user" "/home/$user/welcome.txt"
+    chmod 600 "/home/$user/welcome.txt"
 done
