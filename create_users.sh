@@ -2,13 +2,13 @@
 
 # Kontrollera att scriptet körs som root
 if [ "$EUID" -ne 0 ]; then
-    echo "ERROR: Please run it as root"
+    echo "Fel: endast root får köra detta script."
     exit 1
 fi
 
 # Kontrollera att minst en användare skickats in
 if [ "$#" -eq 0 ]; then
-    echo "ERROR: No user provided."
+    echo "Användning: $0 användare1 användare2 användare3"
     exit 1
 fi
 
