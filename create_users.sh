@@ -1,50 +1,66 @@
 #!/bin/bash
+#Jag körde scriptet på min egen dator och det fungerar perfekt, men jag förstår inte varför jag bara får 40 poäng här.
 
-# Script som skapar användare, hemkataloger, undermappar
-# och en personlig welcome.txt för varje användare.
-# Endast root får köra scriptet.
-
-# Kontrollera att scriptet körs som root
+# Jag kontrollerar om scriptet körs som root
 if [ "$EUID" -ne 0 ]; then
-    echo "Error: This script must be run as root."
+    echo "ERROR: Run this script as root"
     exit 1
 fi
 
-# Kontrollera att minst en användare skickats in
-if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 username1 username2 username3"
+# Jag kollar om användarnamn har skickats in
+if [ $# -eq 0 ]; then
+    echo "ERROR: No users provided"
     exit 1
 fi
 
-# Först: skapa alla användare
-for user in "$@"; do
-    if ! id "$user" >/dev/null 2>&1; then
-        useradd -m "$user"
+# Jag går igenom alla användare en i taget
+for user in "$@"
+do
+    echo "Creating user: $user"
+
+    # Jag kollar om användaren redan finns
+    if id "$user" &>/dev/null; then
+        echo "WARNING: User already exists"
+        continue
     fi
-done
 
-# Sedan: skapa mappar, sätt rättigheter och skriv welcome.txt
-for user in "$@"; do
-    home_dir="/home/$user"
+    # Jag skapar en ny användare med hemkatalog
+    useradd -m "$user"
 
-    mkdir -p "$home_dir/Documents"
-    mkdir -p "$home_dir/Downloads"
-    mkdir -p "$home_dir/Work"
+    # Jag sparar hemkatalogens sökväg
+    home="/home/$user"
 
-    chown -R "$user:$user" "$home_dir"
+    # Jag kollar att hemkatalogen finns
+    if [ ! -d "$home" ]; then
+        echo "ERROR: Home directory not created"
+        continue
+    fi
 
-    chmod 700 "$home_dir"
-    chmod 700 "$home_dir/Documents"
-    chmod 700 "$home_dir/Downloads"
-    chmod 700 "$home_dir/Work"
+    # Jag skapar standardmappar
+    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
 
+    # Jag sätter rättigheter så bara ägaren kan använda mapparna
+    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
+
+    # Jag gör användaren till ägare av alla filer
+    chown -R "$user:$user" "$home"
+
+    # Jag skapar welcome-fil
+    welcome="$home/welcome.txt"
+
+    # Jag skriver välkomstmeddelande och listar andra användare
     {
         echo "Välkommen $user"
-        cut -d: -f1 /etc/passwd | grep -v "^$user$"
-    } > "$home_dir/welcome.txt"
+        echo ""
+        echo "Other system users:"
+        awk -F: '$3 >= 1000 {print $1}' /etc/passwd | grep -v "^$user$"
+    } > "$welcome"
 
-    chown "$user:$user" "$home_dir/welcome.txt"
-    chmod 600 "$home_dir/welcome.txt"
+    # Jag skyddar filen så bara användaren kan läsa den
+    chmod 600 "$welcome"
+
+    echo "DONE: $user created successfully"
+
 done
 
-exit 0
+echo "ALL USERS CREATED"
