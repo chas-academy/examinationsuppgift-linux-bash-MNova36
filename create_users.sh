@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # =========================
-# Kontroll: måste köras som root
+# Kontroll: root krävs
 # =========================
 if [ "$EUID" -ne 0 ]; then
-    echo "FEL: Du måste köra detta som root"
+    echo "FEL: Scriptet måste köras som root"
     exit 1
 fi
 
 # =========================
-# Kontroll: finns användare?
+# Kontroll: input
 # =========================
 if [ $# -eq 0 ]; then
     echo "FEL: Inga användare angivna"
@@ -17,27 +17,22 @@ if [ $# -eq 0 ]; then
 fi
 
 # =========================
-# Lista av användare
+# Loop genom alla användare
 # =========================
-users=("$@")
+for user in "$@"; do
 
-# =========================
-# Skapa användare
-# =========================
-for user in "${users[@]}"; do
-
-    # Skapa användare
+    # Skapa användare (standard Linux)
     useradd -m "$user"
 
-    # Hemkatalog
-    home="/home/$user"
+    # Hämta korrekt hemkatalog från systemet (VIKTIGT i tester)
+    home=$(getent passwd "$user" | cut -d: -f6)
 
-    # Skapa mappar
+    # Säkerställ att katalogen finns
     mkdir -p "$home/Documents"
     mkdir -p "$home/Downloads"
     mkdir -p "$home/Work"
 
-    # Sätt ägare
+    # Sätt ägare på hela hemkatalogen
     chown -R "$user:$user" "$home"
 
     # Sätt rättigheter (endast ägare)
@@ -45,12 +40,12 @@ for user in "${users[@]}"; do
     chmod 700 "$home/Downloads"
     chmod 700 "$home/Work"
 
-    # Skapa välkomstfil
+    # Skapa welcome.txt
     echo "Välkommen $user" > "$home/welcome.txt"
     echo "" >> "$home/welcome.txt"
     cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$home/welcome.txt"
 
-    # Sätt rätt ägare och rättigheter på filen
+    # Sätt rätt ägare + rättigheter
     chown "$user:$user" "$home/welcome.txt"
     chmod 600 "$home/welcome.txt"
 
