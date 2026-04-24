@@ -15,10 +15,22 @@ fi
 # Loop
 for user in "$@"; do
 
+    # Kontrollera om användaren redan finns
+    if id "$user" &>/dev/null; then
+        echo "WARNING: User already exists"
+        continue
+    fi
+
     # Skapa användare
     useradd -m "$user"
 
     home="/home/$user"
+
+    # Kontrollera att hemkatalogen skapades
+    if [ ! -d "$home" ]; then
+        echo "ERROR: Home directory not created"
+        continue
+    fi
 
     # Skapa mappar
     mkdir -p "$home/Documents"
@@ -34,13 +46,13 @@ for user in "$@"; do
     chmod 700 "$home/Work"
 
     # Skapa welcome.txt
-    echo "Välkommen $user" > "$home/welcome.txt"
-    echo "" >> "$home/welcome.txt"
-    cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$home/welcome.txt"
+    welcome="$home/welcome.txt"
+    echo "Välkommen $user" > "$welcome"
+    echo "" >> "$welcome"
+    cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$welcome"
 
-    # Rättigheter på fil
-    chmod 600 "$welcom"
+    # Rättigheter på fil (FIX: $welcome not $welcom!)
+    chmod 600 "$welcome"
     chown "$user:$user" "$welcome"
-    
 
 done
