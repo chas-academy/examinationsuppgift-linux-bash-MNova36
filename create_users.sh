@@ -12,10 +12,11 @@ fi
 
 for user in "$@"; do
 
-    # Skapa användare 
-    adduser --disabled-password --gecos "" "$user"
+    # skapa användare 
+    useradd -m "$user"
 
-    home="/home/$user"
+    # home från systemet
+    home=$(eval echo "~$user")
 
     mkdir -p "$home/Documents"
     mkdir -p "$home/Downloads"
