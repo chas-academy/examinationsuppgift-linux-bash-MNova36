@@ -39,7 +39,8 @@ for user in "$@"; do
     cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$home/welcome.txt"
 
     # Rättigheter på fil
-    chown "$user:$user" "$home/welcome.txt"
-    chmod 600 "$home/welcome.txt"
+    chmod 600 "$welcom"
+    chown "$user:$user" "$welcome"
+    
 
 done
