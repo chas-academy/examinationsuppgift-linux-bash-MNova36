@@ -1,69 +1,63 @@
 #!/bin/bash
 
+# ============================================
+# Skapar användare + katalogstruktur + welcome
+# ============================================
 
-# --- FÄRGER FÖR OUTPUT ---
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-# --- 1. KONTROLLERA ROOT ---
-# Scriptet måste köras som root (UID 0)
+# --- ROOT CHECK ---
 if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}Fel: Detta script måste köras som root (sudo).${NC}"
+    echo "Måste köras som root"
     exit 1
 fi
 
-# --- 2. KONTROLLERA ARGUMENT ---
-# Minst en användare måste anges
+# --- KONTROLLERA INPUT ---
 if [ "$#" -lt 1 ]; then
-    echo "Användning: $0 användare1 användare2 ..."
+    echo "Användning: $0 användare..."
     exit 1
 fi
 
-# --- FUNKTION: SKAPA ANVÄNDARE ---
-create_user() {
-    USERNAME=$1
-
-    # Skapa användaren med hemkatalog om den inte finns
-    if id "$USERNAME" &>/dev/null; then
-        echo "Användaren $USERNAME finns redan."
-    else
-        useradd -m "$USERNAME"
-        echo -e "${GREEN}Skapade användare: $USERNAME${NC}"
+# --- 1. SKAPA ALLA ANVÄNDARE FÖRST ---
+for USER in "$@"
+do
+    if ! id "$USER" &>/dev/null; then
+        useradd "$USER"
+        mkdir -p "/home/$USER"
     fi
+done
 
-    HOME_DIR="/home/$USERNAME"
+# --- 2. KONFIGURERA VARJE ANVÄNDARE ---
+for USER in "$@"
+do
+    HOME_DIR="/home/$USER"
 
-    # --- 3. SKAPA KATALOGSTRUKTUR ---
+    # säkerställ hemkatalog
+    mkdir -p "$HOME_DIR"
+
+    # skapa mappar
     mkdir -p "$HOME_DIR/Documents"
     mkdir -p "$HOME_DIR/Downloads"
     mkdir -p "$HOME_DIR/Work"
 
-    # Sätt rätt ägare
-    chown -R "$USERNAME:$USERNAME" "$HOME_DIR"
+    # sätt ägare
+    chown -R "$USER:$USER" "$HOME_DIR"
 
-    # --- 4. SÄTT RÄTTIGHETER ---
+    # sätt rättigheter (strikta)
     chmod 700 "$HOME_DIR/Documents"
     chmod 700 "$HOME_DIR/Downloads"
     chmod 700 "$HOME_DIR/Work"
 
-    # --- 5. SKAPA WELCOME-FIL ---
-    WELCOME_FILE="$HOME_DIR/welcome.txt"
+    # --- skapa welcome.txt ---
+    FILE="$HOME_DIR/welcome.txt"
 
-    echo "Välkommen $USERNAME" > "$WELCOME_FILE"
+    echo "Välkommen $USER" > "$FILE"
 
-    # Lista alla användare i systemet (från /etc/passwd)
-    cut -d: -f1 /etc/passwd >> "$WELCOME_FILE"
+    # lista ALLA användare EFTER att alla skapats
+    cut -d: -f1 /etc/passwd >> "$FILE"
 
-    # Sätt rätt ägare även på filen
-    chown "$USERNAME:$USERNAME" "$WELCOME_FILE"
-    chmod 644 "$WELCOME_FILE"
-}
+    # rätt ägare
+    chown "$USER:$USER" "$FILE"
+    chmod 644 "$FILE"
 
-# --- LOOPA IGENOM ALLA ARGUMENT ---
-for USER in "$@"
-do
-    create_user "$USER"
 done
 
 exit 0
