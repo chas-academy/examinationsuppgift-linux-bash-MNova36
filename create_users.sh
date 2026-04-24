@@ -1,51 +1,45 @@
 #!/bin/bash
 
-# Root check
+# Kontrollera root
 if [ "$EUID" -ne 0 ]; then
+    echo "Run as root"
     exit 1
 fi
 
-# Check args
+# Kontrollera input
 if [ $# -eq 0 ]; then
+    echo "No users provided"
     exit 1
 fi
 
+# Loop
 for user in "$@"; do
 
-    # Skip if exists
-    if id "$user" &>/dev/null; then
-        continue
-    fi
+    # Skapa användare
+    useradd -m "$user"
 
-    # Create user (robust for CI)
-    useradd -m "$user" 2>/dev/null || adduser --disabled-password --gecos "" "$user"
+    home="/home/$user"
 
-    # Verify user exists
-    if ! id "$user" &>/dev/null; then
-        continue
-    fi
+    # Skapa mappar
+    mkdir -p "$home/Documents"
+    mkdir -p "$home/Downloads"
+    mkdir -p "$home/Work"
 
-    # Get home dir
-    home=$(getent passwd "$user" | cut -d: -f6)
-
-    # Ensure home exists (CI fix)
-    mkdir -p "$home"
-
-    # Create folders
-    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
-
-    # Create welcome file
-    welcome="$home/welcome.txt"
-
-    echo "Välkommen $user" > "$welcome"
-    echo "" >> "$welcome"
-    cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$welcome"
-
-    # Set ownership (AFTER everything)
+    # Sätt ägare
     chown -R "$user:$user" "$home"
 
-    # Set permissions
-    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
-    chmod 600 "$welcome"
+    # Sätt rättigheter
+    chmod 700 "$home/Documents"
+    chmod 700 "$home/Downloads"
+    chmod 700 "$home/Work"
+
+    # Skapa welcome.txt
+    echo "Välkommen $user" > "$home/welcome.txt"
+    echo "" >> "$home/welcome.txt"
+    cut -d: -f1 /etc/passwd | grep -v "^$user$" >> "$home/welcome.txt"
+
+    # Rättigheter på fil
+    chown "$user:$user" "$home/welcome.txt"
+    chmod 600 "$home/welcome.txt"
 
 done
