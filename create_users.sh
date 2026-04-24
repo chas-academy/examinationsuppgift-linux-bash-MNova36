@@ -1,66 +1,50 @@
 #!/bin/bash
-#Jag körde scriptet på min egen dator och det fungerar perfekt, men jag förstår inte varför jag bara får 40 poäng här.
 
-# Jag kontrollerar om scriptet körs som root
+# Root check
 if [ "$EUID" -ne 0 ]; then
     echo "ERROR: Run this script as root"
     exit 1
 fi
 
-# Jag kollar om användarnamn har skickats in
+# Check args
 if [ $# -eq 0 ]; then
     echo "ERROR: No users provided"
     exit 1
 fi
 
-# Jag går igenom alla användare en i taget
-for user in "$@";
-do
-    echo "Creating user: $user"
+for user in "$@"; do
 
-    # Jag kollar om användaren redan finns
+    # Skip if exists
     if id "$user" &>/dev/null; then
-        echo "WARNING: User already exists"
         continue
     fi
 
-    # Jag skapar en ny användare med hemkatalog
-    useradd -m "$user"
+    # Create user
+    useradd -m -s /bin/bash "$user"
 
-    # Jag sparar hemkatalogens sökväg
-    home="/home/$user"
+    # Get REAL home directory
+    home=$(getent passwd "$user" | cut -d: -f6)
 
-    # Jag kollar att hemkatalogen finns
-    if [ ! -d "$home" ]; then
-        echo "ERROR: Home directory not created"
-        continue
-    fi
-
-    # Jag skapar standardmappar
+    # Create folders
     mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
 
-     # Jag gör användaren till ägare av alla filer
+    # Set owner FIRST
     chown -R "$user:$user" "$home"
 
-    # Jag sätter rättigheter så bara ägaren kan använda mapparna
+    # Set permissions
     chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
 
-   
-    # Jag skapar welcome-fil
+    # Create welcome file
     welcome="$home/welcome.txt"
 
-    # Jag skriver välkomstmeddelande och listar andra användare
     {
         echo "Välkommen $user"
         echo ""
         cut -d: -f1 /etc/passwd | grep -v "^$user$"
     } > "$welcome"
 
-    # Jag skyddar filen så bara användaren kan läsa den
-    chmod "$user:$user" "$welcom"
-
-    echo "DONE: $user created successfully"
+    # FIX: set correct owner
+    chown "$user:$user" "$welcome"
+    chmod 600 "$welcome"
 
 done
-
-echo "ALL USERS CREATED"
