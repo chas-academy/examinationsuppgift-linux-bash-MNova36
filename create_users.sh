@@ -1,4 +1,4 @@
-#!/bin/bas
+#!/bin/bass
 
 # Kontrollera root
 if [ "$EUID" -ne 0 ]; then
