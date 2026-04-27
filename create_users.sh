@@ -49,7 +49,7 @@ done
 #men eftersom jag inte fick full poäng ändrade jag denna del här så att welcome.txt skapas efter att alla användare har skapats.
 
 
-for user in "$@"
+for username in "$@"
 do
     home=$(getent passwd "$username" | cut -d: -f6)
 
