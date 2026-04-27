@@ -1,75 +1,44 @@
 #!/bin/bash
 
-# Jag kontrollerar om scriptet körs som root
+# This script creates users, folders, permissions, and welcome files.
+
 if [ "$EUID" -ne 0 ]; then
-    echo "ERROR: Run this script as root"
+    echo "Error: This script must be run as root." >&2
     exit 1
 fi
 
-# Jag kollar om användarnamn har skickats in
-if [ $# -eq 0 ]; then
-    echo "ERROR: No users provided"
+if [ "$#" -eq 0 ]; then
+    echo "Error: Please provide at least one username." >&2
     exit 1
 fi
 
-# Jag går igenom alla användare en i taget
-for username in "$@"
-do
-    echo "Creating user: $username"
-
-    # Jag kollar om användaren redan finns
-    if id "$username" &>/dev/null; then
-        echo "WARNING: User already exists"
-        continue
+# First create all users.
+for username in "$@"; do
+    if ! id "$username" >/dev/null 2>&1; then
+        useradd -m -s /bin/bash "$username"
     fi
-
-    # Jag skapar en ny användare med hemkatalog
-    useradd -m -s /bin/bash "$username"
-
-    # Jag sparar hemkatalogens sökväg
-    home=$(getent passwd "$username" | cut -d: -f6)
-
-    # Jag kollar att hemkatalogen finns
-    if [ ! -d "$home" ]; then
-        echo "ERROR: Home directory not created"
-        continue
-    fi
-
-    # Jag skapar standardmappar
-    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
-
-    # Jag sätter rättigheter så bara ägaren kan använda mapparna
-    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
-
-    # Jag gör användaren till ägare av alla filer
-    chown -R "$username:$username" "$home"
-
 done
-#Skapa welcome.txt efter att alla användare finns. I videon var scriptet lite annorlunda, 
-#men eftersom jag inte fick full poäng ändrade jag denna del här så att welcome.txt skapas efter att alla användare har skapats.
 
+# Then create folders, permissions, and welcome files for each user.
+for username in "$@"; do
+    home_dir="/home/$username"
+    user_group=$(id -gn "$username")
 
-for username in "$@"
-do
-    home=$(getent passwd "$username" | cut -d: -f6)
+    mkdir -p "$home_dir/Documents"
+    mkdir -p "$home_dir/Downloads"
+    mkdir -p "$home_dir/Work"
 
-    # Hoppa över om hemkatalog saknas
-    [ -z "$home" ] && continue
+    chown -R "$username:$user_group" "$home_dir"
 
-    welcome="$home/welcome.txt"
+    chmod 700 "$home_dir/Documents"
+    chmod 700 "$home_dir/Downloads"
+    chmod 700 "$home_dir/Work"
 
-    echo "Välkommen $username" > "$welcome"
-    echo "" >> "$welcome"
-    echo "Andra användare i systemet:" >> "$welcome"
+    welcome_file="$home_dir/welcome.txt"
 
-    while IFS=: read -r name _ uid _
-    do
-        if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
-            echo "- $name" >> "$welcome"
-        fi
-    done < /etc/passwd
+    echo "Välkommen $username" > "$welcome_file"
+    getent passwd | cut -d: -f1 | grep -vx "$username" >> "$welcome_file"
 
-    chown "$username:$username" "$welcome"
-    chmod 600 "$welcome"
-
+    chown "$username:$user_group" "$welcome_file"
+    chmod 600 "$welcome_file"
 done
