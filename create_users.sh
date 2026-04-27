@@ -1,85 +1,84 @@
 #!/bin/bash
-# Script to create users, folders and welcome file
+# Script for creating users and preparing their home folders
 
-# ---------- Check root ----------
+# ---------- Root check ----------
 if [ "$EUID" -ne 0 ]; then
-    echo "ERROR: Run this script with sudo"
+    echo "Please run with sudo"
     exit 1
 fi
 
-# ---------- Check arguments ----------
-if [ $# -lt 1 ]; then
-    echo "Usage: sudo $0 user1 user2 user3"
+# ---------- Check if usernames are given ----------
+if [ $# -eq 0 ]; then
+    echo "Usage: sudo $0 username1 username2 ..."
     exit 1
 fi
 
 # =====================================
-# PART 1: Create users and directories
+# Step 1: Create users and folders
 # =====================================
 
-for username in "$@"
+for person in "$@"
 do
-    # Skip if user already exists
-    if id "$username" >/dev/null 2>&1; then
-        echo "User '$username' already exists"
+    # Check if user already exists
+    if id "$person" >/dev/null 2>&1; then
+        echo "User $person already exists"
         continue
     fi
 
-    # Create new user with home directory
-    useradd -m -s /bin/bash "$username"
+    # Create user with home directory
+    useradd -m -s /bin/bash "$person"
 
-    # Find user home path from system
-    user_home=$(getent passwd "$username" | cut -d: -f6)
+    # Get user's home directory
+    home_path=$(getent passwd "$person" | cut -d: -f6)
 
-    # Create required folders
-    for folder in Documents Downloads Work
+    # Create folders inside home directory
+    mkdir -p "$home_path/Documents"
+    mkdir -p "$home_path/Downloads"
+    mkdir -p "$home_path/Work"
+
+    # Give ownership to the user
+    chown -R "$person:$person" "$home_path"
+
+    # Set permissions so only owner has access
+    chmod 700 "$home_path/Documents"
+    chmod 700 "$home_path/Downloads"
+    chmod 700 "$home_path/Work"
+
+    echo "User $person created"
+done
+
+# =====================================
+# Step 2: Create welcome.txt
+# =====================================
+
+for person in "$@"
+do
+    home_path=$(getent passwd "$person" | cut -d: -f6)
+
+    # Skip if home directory does not exist
+    [ -z "$home_path" ] && continue
+
+    welcome="$home_path/welcome.txt"
+
+    echo "Välkommen $person" > "$welcome"
+    echo "" >> "$welcome"
+    echo "Other users in the system:" >> "$welcome"
+
+    # Show all other users
+    while IFS=: read -r name _ uid _
     do
-        mkdir -p "$user_home/$folder"
-        chmod 700 "$user_home/$folder"
-    done
+        if [ "$uid" -ge 1000 ] && [ "$name" != "$person" ]; then
+            echo "$name" >> "$welcome"
+        fi
+    done < /etc/passwd
 
-    # Change owner of everything
-    chown -R "$username:$username" "$user_home"
+    # Secure the file
+    chown "$person:$person" "$welcome"
+    chmod 600 "$welcome"
 
-    echo "Created: $username"
+    echo "welcome.txt created for $person"
 done
 
-# =====================================
-# PART 2: Create welcome.txt
-# =====================================
-
-for username in "$@"
-do
-    user_home=$(getent passwd "$username" | cut -d: -f6)
-
-    # If home folder not found → skip
-    if [ -z "$user_home" ]; then
-        continue
-    fi
-
-    file="$user_home/welcome.txt"
-
-    {
-        echo "Välkommen $username"
-        echo ""
-        echo "Alla andra användare i systemet:"
-
-        while IFS=: read -r name _ uid _
-        do
-            if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
-                echo "$name"
-            fi
-        done < /etc/passwd
-
-    } > "$file"
-
-    # Set correct owner and file permission
-    chown "$username:$username" "$file"
-    chmod 600 "$file"
-
-    echo "welcome.txt created for $username"
-done
-
-echo "Script finished successfully"
+echo "All tasks completed"
 
 exit 0
