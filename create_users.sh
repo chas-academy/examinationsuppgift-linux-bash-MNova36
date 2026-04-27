@@ -1,65 +1,85 @@
 #!/bin/bash
+# Script to create users, folders and welcome file
 
-# Jag kontrollerar om scriptet körs som root
+# ---------- Check root ----------
 if [ "$EUID" -ne 0 ]; then
-    echo "ERROR: Run this script as root"
+    echo "ERROR: Run this script with sudo"
     exit 1
 fi
 
-# Jag kollar om användarnamn har skickats in
-if [ $# -eq 0 ]; then
-    echo "ERROR: No users provided"
+# ---------- Check arguments ----------
+if [ $# -lt 1 ]; then
+    echo "Usage: sudo $0 user1 user2 user3"
     exit 1
 fi
 
-# Jag går igenom alla användare en i taget
-for user in "$@"
+# =====================================
+# PART 1: Create users and directories
+# =====================================
+
+for username in "$@"
 do
-    echo "Creating user: $user"
-
-    # Jag kollar om användaren redan finns
-    if id "$user" &>/dev/null; then
-        echo "WARNING: User already exists"
+    # Skip if user already exists
+    if id "$username" >/dev/null 2>&1; then
+        echo "User '$username' already exists"
         continue
     fi
 
-    # Jag skapar en ny användare med hemkatalog
-    useradd -m "$user"
+    # Create new user with home directory
+    useradd -m -s /bin/bash "$username"
 
-    # Jag sparar hemkatalogens sökväg
-    home="/home/$user"
+    # Find user home path from system
+    user_home=$(getent passwd "$username" | cut -d: -f6)
 
-    # Jag kollar att hemkatalogen finns
-    if [ ! -d "$home" ]; then
-        echo "ERROR: Home directory not created"
-        continue
-    fi
+    # Create required folders
+    for folder in Documents Downloads Work
+    do
+        mkdir -p "$user_home/$folder"
+        chmod 700 "$user_home/$folder"
+    done
 
-    # Jag skapar standardmappar
-    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
+    # Change owner of everything
+    chown -R "$username:$username" "$user_home"
 
-    # Jag sätter rättigheter så bara ägaren kan använda mapparna
-    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
-
-    # Jag gör användaren till ägare av alla filer
-    chown -R "$user:$user" "$home"
-
-    # Jag skapar welcome-fil
-    welcome="$home/welcome.txt"
-
-    # Jag skriver välkomstmeddelande och listar andra användare
-    {
-        echo "Välkommen $user"
-        echo ""
-        echo "Other system users:"
-        awk -F: '$3 >= 1000 {print $1}' /etc/passwd | grep -v "^$user$"
-    } > "$welcome"
-
-    # Jag skyddar filen så bara användaren kan läsa den
-    chmod 600 "$welcome"
-
-    echo "DONE: $user created successfully"
-
+    echo "Created: $username"
 done
 
-echo "ALL USERS CREATED"
+# =====================================
+# PART 2: Create welcome.txt
+# =====================================
+
+for username in "$@"
+do
+    user_home=$(getent passwd "$username" | cut -d: -f6)
+
+    # If home folder not found → skip
+    if [ -z "$user_home" ]; then
+        continue
+    fi
+
+    file="$user_home/welcome.txt"
+
+    {
+        echo "Välkommen $username"
+        echo ""
+        echo "Alla andra användare i systemet:"
+
+        while IFS=: read -r name _ uid _
+        do
+            if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
+                echo "$name"
+            fi
+        done < /etc/passwd
+
+    } > "$file"
+
+    # Set correct owner and file permission
+    chown "$username:$username" "$file"
+    chmod 600 "$file"
+
+    echo "welcome.txt created for $username"
+done
+
+echo "Script finished successfully"
+
+exit 0
