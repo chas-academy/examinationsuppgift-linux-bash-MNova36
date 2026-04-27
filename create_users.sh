@@ -1,84 +1,53 @@
 #!/bin/bash
-# Script for creating users and preparing their home folders
-
-# ---------- Root check ----------
 if [ "$EUID" -ne 0 ]; then
-    echo "Please run with sudo"
+    echo "Kör scriptet som root: sudo $0"
     exit 1
 fi
 
-# ---------- Check if usernames are given ----------
 if [ $# -eq 0 ]; then
-    echo "Usage: sudo $0 username1 username2 ..."
+    echo "Användning: sudo $0 <användare1> <användare2>"
     exit 1
 fi
 
-# =====================================
-# Step 1: Create users and folders
-# =====================================
-
-for person in "$@"
-do
-    # Check if user already exists
-    if id "$person" >/dev/null 2>&1; then
-        echo "User $person already exists"
+# Steg 1: Skapa alla användare och mappar först
+for username in "$@"; do
+    if id "$username" &>/dev/null; then
+        echo "Användaren '$username' finns redan."
         continue
     fi
 
-    # Create user with home directory
-    useradd -m -s /bin/bash "$person"
+    useradd -m -s /bin/bash "$username"
 
-    # Get user's home directory
-    home_path=$(getent passwd "$person" | cut -d: -f6)
+    home_dir=$(getent passwd "$username" | cut -d: -f6)
 
-    # Create folders inside home directory
-    mkdir -p "$home_path/Documents"
-    mkdir -p "$home_path/Downloads"
-    mkdir -p "$home_path/Work"
+    mkdir -p "${home_dir}/Documents"
+    mkdir -p "${home_dir}/Downloads"
+    mkdir -p "${home_dir}/Work"
 
-    # Give ownership to the user
-    chown -R "$person:$person" "$home_path"
+    chown -R "${username}:${username}" "$home_dir"
+    chmod 700 "${home_dir}/Documents"
+    chmod 700 "${home_dir}/Downloads"
+    chmod 700 "${home_dir}/Work"
 
-    # Set permissions so only owner has access
-    chmod 700 "$home_path/Documents"
-    chmod 700 "$home_path/Downloads"
-    chmod 700 "$home_path/Work"
-
-    echo "User $person created"
+    echo "Användare '$username' skapad."
 done
 
-# =====================================
-# Step 2: Create welcome.txt
-# =====================================
+# Steg 2: Skapa welcome.txt för alla användare (nu finns alla i /etc/passwd)
+for username in "$@"; do
+    home_dir=$(getent passwd "$username" | cut -d: -f6)
+    [ -z "$home_dir" ] && continue
 
-for person in "$@"
-do
-    home_path=$(getent passwd "$person" | cut -d: -f6)
+    echo "Välkommen $username" > "${home_dir}/welcome.txt"
+    echo "" >> "${home_dir}/welcome.txt"
+    echo "Andra användare i systemet:" >> "${home_dir}/welcome.txt"
 
-    # Skip if home directory does not exist
-    [ -z "$home_path" ] && continue
-
-    welcome="$home_path/welcome.txt"
-
-    echo "Välkommen $person" > "$welcome"
-    echo "" >> "$welcome"
-    echo "Other users in the system:" >> "$welcome"
-
-    # Show all other users
-    while IFS=: read -r name _ uid _
-    do
-        if [ "$uid" -ge 1000 ] && [ "$name" != "$person" ]; then
-            echo "$name" >> "$welcome"
+    while IFS=: read -r name _ uid _; do
+        if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
+            echo "  - $name" >> "${home_dir}/welcome.txt"
         fi
     done < /etc/passwd
 
-    # Secure the file
-    chown "$person:$person" "$welcome"
-    chmod 600 "$welcome"
-
-    echo "welcome.txt created for $person"
+    chown "${username}:${username}" "${home_dir}/welcome.txt"
 done
-
-echo "All tasks completed"
 
 exit 0
