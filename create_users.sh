@@ -1,68 +1,75 @@
 #!/bin/bash
-# =============================================================================
-# create_users.sh — Automatiserat script för användarskapande
-# Kurs: Linux & Bash | Student: DZ3ZF8BP
-#
-# Användning: sudo ./create_users.sh <användare1> <användare2> ...
-# Exempel:    sudo ./create_users.sh Anna Bjorn Charlie
-#
-# Scriptet:
-#   1. Kontrollerar att det körs som root
-#   2. Skapar varje användare med useradd
-#   3. Skapar mapparna Documents, Downloads och Work i hemkatalogen
-#   4. Sätter rättigheter så att endast ägaren kan läsa/skriva (700)
-#   5. Skapar en personlig welcome.txt med välkomstmeddelande och användarlista
-# =============================================================================
 
+# Jag kontrollerar om scriptet körs som root
 if [ "$EUID" -ne 0 ]; then
-    echo "Kör scriptet som root: sudo $0"
+    echo "ERROR: Run this script as root"
     exit 1
 fi
 
+# Jag kollar om användarnamn har skickats in
 if [ $# -eq 0 ]; then
-    echo "Användning: sudo $0 <användare1> <användare2>"
+    echo "ERROR: No users provided"
     exit 1
 fi
 
-# Steg 1: Skapa alla användare och mappar först
-for username in "$@"; do
-    if id "$username" &>/dev/null; then
-        echo "Användaren '$username' finns redan."
+# Jag går igenom alla användare en i taget
+for user in "$@"
+do
+    echo "Creating user: $user"
+
+    # Jag kollar om användaren redan finns
+    if id "$user" &>/dev/null; then
+        echo "WARNING: User already exists"
         continue
     fi
 
-    useradd -m -s /bin/bash "$username"
+    # Jag skapar en ny användare med hemkatalog
+    useradd -m -s /bin/bash "$user"
 
-    home_dir=$(getent passwd "$username" | cut -d: -f6)
+    # Jag sparar hemkatalogens sökväg
+    home=$(getent passwd "$user" | cut -d: -f6)
 
-    mkdir -p "${home_dir}/Documents"
-    mkdir -p "${home_dir}/Downloads"
-    mkdir -p "${home_dir}/Work"
+    # Jag kollar att hemkatalogen finns
+    if [ ! -d "$home" ]; then
+        echo "ERROR: Home directory not created"
+        continue
+    fi
 
-    chown -R "${username}:${username}" "$home_dir"
-    chmod 700 "${home_dir}/Documents"
-    chmod 700 "${home_dir}/Downloads"
-    chmod 700 "${home_dir}/Work"
+    # Jag skapar standardmappar
+    mkdir -p "$home/Documents" "$home/Downloads" "$home/Work"
 
-    echo "Användare '$username' skapad."
+    # Jag sätter rättigheter så bara ägaren kan använda mapparna
+    chmod 700 "$home/Documents" "$home/Downloads" "$home/Work"
+
+    # Jag gör användaren till ägare av alla filer
+    chown -R "$user:$user" "$home"
+
 done
+#Skapa welcome.txt efter att alla användare finns. I videon var scriptet lite annorlunda, 
+#men eftersom jag inte fick full poäng ändrade jag denna del här så att welcome.txt skapas efter att alla användare har skapats.
 
-# Steg 2: Skapa welcome.txt för alla användare (nu finns alla i /etc/passwd)
-for username in "$@"; do
-    home_dir=$(getent passwd "$username" | cut -d: -f6)
-    [ -z "$home_dir" ] && continue
 
-    echo "Välkommen $username" > "${home_dir}/welcome.txt"
-    echo "" >> "${home_dir}/welcome.txt"
-    echo "Andra användare i systemet:" >> "${home_dir}/welcome.txt"
+for user in "$@"
+do
+    home=$(getent passwd "$user" | cut -d: -f6)
 
-    while IFS=: read -r name _ uid _; do
-        if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
-            echo "  - $name" >> "${home_dir}/welcome.txt"
+    # Hoppa över om hemkatalog saknas
+    [ -z "$home" ] && continue
+
+    welcome="$home/welcome.txt"
+
+    echo "Välkommen $user" > "$welcome"
+    echo "" >> "$welcome"
+    echo "Andra användare i systemet:" >> "$welcome"
+
+    while IFS=: read -r name _ uid _
+    do
+        if [ "$uid" -ge 1000 ] && [ "$name" != "$user" ]; then
+            echo "- $name" >> "$welcome"
         fi
     done < /etc/passwd
 
-    chown "${username}:${username}" "${home_dir}/welcome.txt"
-done
+    chown "$user:$user" "$welcome"
+    chmod 600 "$welcome"
 
-exit 0
+done
