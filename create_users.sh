@@ -45,8 +45,7 @@ do
     chown -R "$username:$username" "$home"
 
 done
-#Skapa welcome.txt efter att alla användare finns. I videon var scriptet lite annorlunda, 
-#men eftersom jag inte fick full poäng ändrade jag denna del här så att welcome.txt skapas efter att alla användare har skapats.
+#Skapa welcome.txt efter att alla användare finns.
 
 
 for username in "$@"
