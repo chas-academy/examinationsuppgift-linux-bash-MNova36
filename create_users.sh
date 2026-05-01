@@ -19,8 +19,9 @@ do
 
     # Jag kollar om användaren redan finns
     if id "$username" &>/dev/null; then
-        echo "WARNING: User already exists"
-        continue
+        echo "User exists: $username"
+    else
+        useradd -m -s /bin/bash "$username"
     fi
 
     # Jag skapar en ny användare med hemkatalog
@@ -64,7 +65,7 @@ do
     while IFS=: read -r name _ uid _
     do
         if [ "$uid" -ge 1000 ] && [ "$name" != "$username" ]; then
-            echo "- $name" >> "$welcome"
+            echo "$name" >> "$welcome"
         fi
     done < /etc/passwd
 
